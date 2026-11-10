@@ -49,3 +49,18 @@ outputs/metrics/*
 # Keep output directories
 !outputs/figures/.gitkeep
 !outputs/metrics/.gitkeep
+
+# Keep final face-recognition artifacts
+!models/face_recognition_bundle.joblib
+
+!outputs/metrics/face_model_metrics.json
+!outputs/metrics/unauthorized_face_test_results.csv
+
+!outputs/figures/embedding_similarity_distribution.png
+!outputs/figures/original_embedding_similarity_heatmap.png
+!outputs/figures/face_recognition_confusion_matrix.png
+!outputs/figures/face_rejection_threshold.png
+!outputs/figures/unauthorized_face_final_test.png
+!outputs/figures/authorized_face_detection.png
+!outputs/figures/authorized_aligned_faces.png
+!outputs/figures/image_augmentation_examples.png

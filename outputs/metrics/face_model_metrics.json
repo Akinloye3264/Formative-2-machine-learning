@@ -1,0 +1,34 @@
+{
+  "cross_validation": {
+    "folds": 3,
+    "evaluation_method": "Three-fold leave-one-expression-out",
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "log_loss": 0.005541532694756481,
+    "authorized_originals_evaluated": 12
+  },
+  "threshold_validation": {
+    "minimum_authorized_similarity": 0.847624688295653,
+    "maximum_unauthorized_similarity": 0.6051122546195984,
+    "rejection_threshold": 0.7263684714576257,
+    "separation_gap": 0.24251243367605457,
+    "false_rejection_rate": 0.0,
+    "false_acceptance_rate": 0.0,
+    "authorized_samples": 12,
+    "unauthorized_samples": 3
+  },
+  "final_unauthorized_test": {
+    "unauthorized_identity_count": 1,
+    "images_evaluated": 3,
+    "images_rejected": 3,
+    "images_accepted": 0,
+    "false_acceptance_rate": 0.0
+  },
+  "limitations": [
+    "Only three original images were available per member.",
+    "Only one identity was used for validation rejection testing.",
+    "Only one different identity was used for final unauthorized testing.",
+    "Results do not represent production security performance."
+  ]
+}
