@@ -1,0 +1,4 @@
+source_file,expression,faces_detected,classifier_prediction,classifier_confidence,nearest_centroid,similarity_to_prediction,threshold,accepted,decision
+unauthorized_test_neutral_01.jpeg,neutral,1,member04,0.9524523260578575,member04,0.5122127532958984,0.7263684714576257,False,REJECTED
+unauthorized_test_smile_01.jpeg,smile,1,member04,0.9646765912141768,member04,0.48149991035461426,0.7263684714576257,False,REJECTED
+unauthorized_test_surprised_01.jpeg,surprised,1,member04,0.6515412300450797,member04,0.3908528685569763,0.7263684714576257,False,REJECTED
