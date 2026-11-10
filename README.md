@@ -112,10 +112,19 @@ The standalone model-training entry points can be run from the repository root
 after their feature CSV files are available:
 
 ```powershell
+python src/preprocess_images.py extract --input path/to/private/image-folders
+python src/preprocess_images.py verify --image path/to/test-face.jpg
 python src/train_product_model.py
 python src/train_face_model.py --data data/processed/image_features.csv
 python src/train_voice_model.py --data data/processed/audio_features.csv
 ```
+
+The image preprocessing command expects `member01` through `member04`
+subdirectories containing one neutral, smile, and surprised image per member.
+It writes aligned and augmented images under `data/processed/images/`, plus the
+augmentation manifest and 512-dimensional FaceNet feature table. The verification
+command loads `models/face_recognition_bundle.joblib` by default and prints an
+`AUTHORIZED` or `REJECTED` decision using the saved experimental threshold.
 
 ## Expected artifacts
 
