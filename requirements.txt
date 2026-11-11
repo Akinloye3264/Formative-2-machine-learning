@@ -10,3 +10,5 @@ soundfile
 audiomentations
 joblib
 facenet-pytorch==2.6.0
+
+imageio-ffmpeg
