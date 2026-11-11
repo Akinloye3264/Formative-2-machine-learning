@@ -288,7 +288,14 @@ def predict_rows(bundle, df):
       1. the model is at least `threshold` sure about who it is, and
       2. the sample is not unusually far from that person's training samples.
     Anything else is treated as an UNKNOWN person (unauthorized attempt).
+
+    Voice models saved by src/train_voice_model.py (bundle with a "method") use
+    claimed-identity verification instead; each row is checked against its own
+    best-matching member here.
     """
+    if bundle.get("method"):
+        import voice_verification as vv
+        return [vv.verify(bundle, row) for row in df.to_dict("records")]
     df = df.copy()
     for col in [c for c in df.columns if "date" in c.lower()]:
         dates = pd.to_datetime(df[col], errors="coerce")
@@ -320,8 +327,19 @@ def verify_features(model_path, features, expected_member=None):
     expected_member: for the voice check, the member the FACE model recognised.
     Returns (member_id, confidence, authorized). If expected_member is given,
     authorized is True only when the model hears that same person.
+
+    For the voice model saved by src/train_voice_model.py, `authorized` is the
+    verification decision for expected_member (cosine similarity to that
+    member's enrolment centroid >= the validation-tuned threshold, and that
+    member is the best match); member_id is the best-matching member and
+    confidence its similarity score. `features` comes from
+    preprocess_audio.extract_features (with SpeechBrain installed, so the
+    ecapa_* columns are present).
     """
     bundle = joblib.load(model_path)
+    if bundle.get("method"):
+        import voice_verification as vv
+        return vv.verify(bundle, features, expected_member)
     guess, conf, ok = predict_rows(bundle, pd.DataFrame([features]))[0]
     if expected_member is not None:
         ok = ok and guess == expected_member

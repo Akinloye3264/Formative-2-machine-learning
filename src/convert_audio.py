@@ -8,10 +8,12 @@ nothing else needs to be installed:
 
 Run from the repository root:
     python src/convert_audio.py --input path/to/original_recordings
-    python src/convert_audio.py --input path/to/outsider_recordings --output data/raw/audio/unauthorized
 
-Name the originals first (member01_yes_approve.mp4, member01_confirm_transaction.ogg ...);
-the WAV keeps the same name, e.g. member01_yes_approve.wav.
+Name the originals first (member01_yes_approve.mp4, member01_yes_approve_2.ogg,
+outsider01_confirm_transaction.m4a ...). The WAV keeps the same name and is
+filed in the per-person layout that src/preprocess_audio.py reads:
+    member01_yes_approve.mp4        -> data/raw/audio/member01/member01_yes_approve.wav
+    outsider01_yes_approve.m4a      -> data/raw/audio/unauthorized/outsider01/outsider01_yes_approve.wav
 """
 import argparse
 import subprocess
@@ -34,21 +36,31 @@ def convert(src: Path, dst: Path, ffmpeg: str) -> None:
     )
 
 
+def destination(src: Path, root: Path) -> Path:
+    """<root>/<person>/<name>.wav, or <root>/unauthorized/<person>/ for outsiders."""
+    name = src.stem.lower()
+    person = name.split("_")[0]
+    folder = root / "unauthorized" / person if person.startswith("outsider") else root / person
+    return folder / f"{name}.wav"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Convert recordings to 16 kHz mono WAV")
     parser.add_argument("--input", type=Path, required=True, help="folder with the original files")
-    parser.add_argument("--output", type=Path, default=Path("data/raw/audio"))
+    parser.add_argument("--output", type=Path, default=Path("data/raw/audio"),
+                        help="audio root; files go to <output>/<person>/ "
+                             "(outsiders: <output>/unauthorized/<person>/)")
     args = parser.parse_args()
 
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
-    args.output.mkdir(parents=True, exist_ok=True)
     files = [p for p in sorted(args.input.iterdir())
              if p.is_file() and p.suffix.lower() not in SKIP_EXTS]
     if not files:
         raise SystemExit(f"No recordings found in {args.input}")
 
     for src in files:
-        dst = args.output / f"{src.stem.lower()}.wav"
+        dst = destination(src, args.output)
+        dst.parent.mkdir(parents=True, exist_ok=True)
         try:
             convert(src, dst, ffmpeg)
             print(f"OK    {src.name} -> {dst}")
