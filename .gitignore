@@ -64,3 +64,9 @@ outputs/metrics/*
 !outputs/figures/authorized_face_detection.png
 !outputs/figures/authorized_aligned_faces.png
 !outputs/figures/image_augmentation_examples.png
+
+# Audio (biometric, keep private)
+data/raw/audio/
+data/processed/audio_augmented/
+!models/voice_model.joblib
+!outputs/metrics/voice_metrics.json
