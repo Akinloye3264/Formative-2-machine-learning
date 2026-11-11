@@ -20,7 +20,7 @@ matches the recognized identity.
 |---|---|---|
 | Product recommendation | `notebooks/01_tabular_eda_merge.ipynb` and `src/train_product_model.py` | Implemented |
 | Face recognition | `notebooks/02_image_processing.ipynb` | Implemented and evaluated |
-| Voice verification | `notebooks/03_audio_processing.ipynb` and `src/train_voice_model.py` | Team integration in progress |
+| Voice verification | `notebooks/03_audio_processing.ipynb` and `src/train_voice_model.py` | Implemented and evaluated (validation-tuned threshold, separate test) |
 | Combined application | `src/app.py` and `notebooks/04_model_evaluation.ipynb` | Pending final integration |
 
 ## Facial-recognition pipeline
@@ -65,12 +65,63 @@ experimental threshold, not a production-security threshold, because only one
 unauthorized identity was available for validation and one different identity
 was available for final testing.
 
+## Voice-verification pipeline
+
+Each of the four members recorded "Yes, approve" and "Confirm transaction"
+three times (24 recordings); four people outside the group recorded both
+phrases once (8 recordings). All audio is 16 kHz mono WAV.
+
+- `src/preprocess_audio.py` trims silence, peak-normalises, adds three
+  augmentations (pitch shift, time stretch, background noise) to member and
+  outsider clips, and extracts 35 hand-crafted features (MFCC, spectral,
+  energy) plus a 192-dimensional pretrained ECAPA-TDNN speaker embedding
+  (SpeechBrain, `src/speaker_embeddings.py`).
+- Splits (`data/processed/audio_splits.csv`, fixed seed 42): members' take 1 is
+  enrolment/training, take 2 is validation and take 3 is test. An original and
+  its augmentations always share a split. Outsiders are split by speaker: two
+  for validation, two for test. Outsiders never train any model.
+- The voice is verified against the identity the face model recognised:
+  accept when the cosine similarity to that member's enrolment centroid is at
+  least the threshold and that member is the best match.
+- Three methods were compared on validation only: the previous logistic
+  regression with confidence + distance checks (retuned), cosine similarity on
+  standardised hand-crafted features, and cosine similarity on ECAPA
+  embeddings. ECAPA was chosen (validation FRR 6.2% vs 53-88% for the others at
+  FAR <= 5%).
+- Threshold rule: lowest validation FRR with outsider FAR <= 5% and mismatch
+  <= 5%, middle of the tied range. Chosen threshold: 0.345. The test split was
+  evaluated once, after the choice.
+
+### Voice-model results (real recordings; validation alongside)
+
+| Measurement | Validation | Test |
+|---|---:|---:|
+| FAR: outsider accepted (clips x claimed members) | 0.0% (0/16) | 6.2% (1/16) |
+| FRR: member rejected for own identity | 0.0% (0/8) | 0.0% (0/8) |
+| Mismatch: member accepted as another member | 0.0% (0/24) | 0.0% (0/24) |
+| Identification accuracy / weighted F1 | 1.000 / 1.000 | 1.000 / 1.000 |
+| Log loss | 0.076 | 0.133 |
+
+Including the augmented copies, test FAR is 10.9% (7/64), FRR 15.6% (5/32)
+and mismatch 0% (0/96). Every accepted test outsider trial was a claim of the
+same member (member03). Full numbers, 95% confidence intervals and the method
+comparison are in `outputs/metrics/voice_metrics.json`; every trial is in
+`outputs/metrics/voice_verification_trials.csv`. The previous model's
+unknown-voice FAR was 59.4% (notebook 05 leave-one-member-out test).
+
+These are small-sample numbers: two test outsiders and eight test recordings.
+The 95% interval for the test FAR on real recordings is 0.2%-30%, so the
+model is far better than before but its true error rates are not yet known
+precisely.
+
 ## Repository structure
 
 ```text
 data/
   raw/                         # Original tabular datasets
-  processed/                   # Generated feature and merged CSV files
+    audio/member01/ ...        # Voice recordings, one folder per member
+    audio/unauthorized/outsider01/ ...  # Recordings of non-members
+  processed/                   # Generated feature, split and merged CSV files
 models/                        # Serialized trained-model artifacts
 notebooks/
   01_tabular_eda_merge.ipynb
@@ -83,7 +134,10 @@ outputs/
 src/
   preprocess_tabular.py
   preprocess_images.py
+  convert_audio.py
   preprocess_audio.py
+  speaker_embeddings.py
+  voice_verification.py
   train_product_model.py
   train_auth_models.py
   train_face_model.py
@@ -116,8 +170,26 @@ python src/preprocess_images.py extract --input path/to/private/image-folders
 python src/preprocess_images.py verify --image path/to/test-face.jpg
 python src/train_product_model.py
 python src/train_face_model.py --data data/processed/image_features.csv
-python src/train_voice_model.py --data data/processed/audio_features.csv
+python src/preprocess_audio.py
+python src/train_voice_model.py
 ```
+
+The voice model needs SpeechBrain for the ECAPA speaker embedding (CPU is
+enough):
+
+```powershell
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install speechbrain
+```
+
+`src/preprocess_audio.py` reads `data/raw/audio/<member_id>/` and
+`data/raw/audio/unauthorized/<outsider_id>/`, writes the feature CSVs and
+`data/processed/audio_splits.csv`. `src/train_voice_model.py --validation-only`
+compares the methods without touching test data; without the flag it also
+evaluates the chosen model once on the test split and saves
+`models/voice_model.joblib`, `outputs/metrics/voice_metrics.json`,
+`outputs/metrics/voice_verification_trials.csv` and
+`outputs/figures/voice_far_frr_threshold.png`.
 
 The image preprocessing command expects `member01` through `member04`
 subdirectories containing one neutral, smile, and surprised image per member.
@@ -150,11 +222,16 @@ reproduce the application.
 ## Data privacy
 
 Raw facial images and voice recordings are biometric data. They must only be
-collected and shared with participant consent. Do not commit raw biometric files
-to a public repository unless every participant has explicitly agreed to public
-distribution. The repository should contain reproducible code, notebooks,
-non-sensitive feature tables when permitted, evaluation summaries, and clear
-instructions for obtaining any private artifacts.
+collected and shared with participant consent.
+
+The raw voice recordings in `data/raw/audio/` (members and outsiders) are
+committed so the audio pipeline can be reproduced and graded. A recording
+may only be in this repository if the person speaking (member or outsider)
+has agreed to it being stored here, and to the repository's visibility. A voice recording can identify a person, so a
+recording must be removed (and the history rewritten) if its owner withdraws
+consent, and new recordings must not be added without the speaker's
+agreement. Augmented audio is regenerated by the scripts and is not committed.
+Raw facial images remain outside the repository.
 
 ## Team responsibilities
 
@@ -171,6 +248,9 @@ instructions for obtaining any private artifacts.
   member.
 - Face-threshold validation and final testing each use only one unauthorized
   identity with three images.
+- Voice verification is tuned on two outsiders and tested on two others, with
+  one recording per phrase per member per split. Noisy rooms, other phrases,
+  other devices and replayed recordings were not tested.
 - Perfect results on this small controlled dataset do not establish real-world
   biometric-security performance.
 - More identities, recording devices, poses, lighting conditions, background

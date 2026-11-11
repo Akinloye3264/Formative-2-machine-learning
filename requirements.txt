@@ -10,5 +10,8 @@ soundfile
 audiomentations
 joblib
 facenet-pytorch==2.6.0
+# Voice verification: pretrained ECAPA speaker embedding (CPU is enough)
+torchaudio
+speechbrain
 
 imageio-ffmpeg
