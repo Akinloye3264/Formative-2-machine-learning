@@ -1,17 +1,20 @@
 pandas
-numpy
+numpy==1.26.4
 scikit-learn
 matplotlib
 seaborn
 opencv-python
-Pillow
+Pillow==10.2.0
 librosa
 soundfile
 audiomentations
 joblib
 facenet-pytorch==2.6.0
 # Voice verification: pretrained ECAPA speaker embedding (CPU is enough)
-torchaudio
-speechbrain
+torch==2.2.2
+torchvision==0.17.2
+torchaudio==2.2.2
+speechbrain==1.0.3
+huggingface-hub==0.28.1
 
 imageio-ffmpeg

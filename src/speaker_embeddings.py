@@ -41,7 +41,9 @@ def available() -> bool:
 def load_encoder():
     """Load the ECAPA encoder once per process."""
     from speechbrain.inference.speaker import EncoderClassifier
+    from speechbrain.utils.fetching import LocalStrategy
     return EncoderClassifier.from_hparams(source=MODEL_SOURCE, savedir=str(MODEL_DIR),
+                                          local_strategy=LocalStrategy.COPY,
                                           run_opts={"device": "cpu"})
 
 
