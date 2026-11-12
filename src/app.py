@@ -97,7 +97,12 @@ def check_voice(audio_path, expected_member, model_path=VOICE_MODEL):
         raise AppError("The recording is silent or empty.")
     features = extract_features(samples)
     needed = joblib.load(model_path)["features"]
-    row = {name: features[name] for name in needed if name in features}
+    missing = [name for name in needed if name not in features]
+    if missing:
+        raise AppError(
+            "The voice model needs the ECAPA speaker embedding, which is not available. Install it with: "
+            "pip install torch torchaudio speechbrain (see requirements.txt)")
+    row = {name: features[name] for name in needed}
     member, confidence, accepted = verify_features(model_path, row, expected_member)
     return {"member": member, "confidence": float(confidence), "accepted": bool(accepted)}
 
